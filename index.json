@@ -1,37 +1,108 @@
 
-{
-  "category:modules": [
-    {
-      "id": "apple-music-all-in-one",
-      "name": "8SPINE Music All-in-One Official",
-      "pkg": "com.dafa.8spine.music",
-      "file": "apple-music.8spine",
-      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/apple-music.8spine",
-      "version": "2.0.0",
-      "code": 100,
-      "type": "MODULE",
-      "author": "Dafa",
-      "description": "Unified Spotify, YouTube Music and Apple Music catalog integration.",
-      "tags": [
-        "SPOTIFY",
-        "YOUTUBE MUSIC",
-        "APPLE MUSIC",
-        "OFFICIAL"
-      ],
-      "featured": false,
-      "trusted": false,
-      "nsfw": false,
-      "size": 0,
-      "lang": "all",
-      "folder": ".",
-      "sources": [
-        {
-          "name": "Music All-in-One",
-          "lang": "all",
-          "id": "apple-music-all-in-one",
-          "baseUrl": "."
-        }
-      ]
+/**
+ * DAFA MULTI-SOURCE MUSIC
+ * Convx 2.0.4 Nightly / 8SPINE
+ *
+ * Apple catalog + preview playback.
+ * Spotify and YouTube Music remain official/native players.
+ */
+
+const MULTI_SOURCE_MUSIC = {
+  id: "dafa-multisource-music",
+  name: "Dafa Multi-Source Music",
+  version: "3.0.0",
+  labels: [
+    "MULTI-SOURCE",
+    "APPLE MUSIC",
+    "SPOTIFY",
+    "YOUTUBE MUSIC",
+    "METADATA"
+  ],
+
+  async searchTracks(query, limit = 30) {
+    const q = String(query || "").trim();
+
+    if (!q) return { tracks: [], total: 0 };
+
+    const n = Math.max(1, Math.min(Number(limit) || 30, 50));
+
+    const url =
+      "https://itunes.apple.com/search?term=" +
+      encodeURIComponent(q) +
+      "&entity=song&limit=" +
+      n +
+      "&country=id";
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error("Apple catalog search failed: " + res.status);
     }
-  ]
-}
+
+    const data = await res.json();
+
+    const tracks = (data.results || []).map(x => ({
+      id: "apple:" + String(x.trackId),
+      title: x.trackName || "Unknown title",
+      artist: x.artistName || "Unknown artist",
+      album: x.collectionName || "",
+      duration: Math.floor((x.trackTimeMillis || 0) / 1000),
+      albumCover: x.artworkUrl100
+        ? x.artworkUrl100.replace("100x100bb", "600x600bb")
+        : null,
+      audioQuality: x.previewUrl ? "PREVIEW" : "METADATA",
+      format: "m4a",
+      streamUrl: x.previewUrl || null
+    }));
+
+    return {
+      tracks,
+      total: Number(data.resultCount) || tracks.length
+    };
+  },
+
+  async getTrackStreamUrl(trackId, quality) {
+    const raw = String(trackId || "");
+
+    if (!raw.startsWith("apple:")) {
+      throw new Error(
+        "Gunakan pemutar resmi Spotify atau YouTube Music."
+      );
+    }
+
+    const id = raw.slice(6);
+
+    const res = await fetch(
+      "https://itunes.apple.com/lookup?id=" +
+      encodeURIComponent(id) +
+      "&country=id"
+    );
+
+    if (!res.ok) {
+      throw new Error("Apple lookup failed: " + res.status);
+    }
+
+    const data = await res.json();
+
+    const item = (data.results || []).find(
+      x => x.wrapperType === "track"
+    );
+
+    if (!item || !item.previewUrl) {
+      throw new Error("Preview Apple tidak tersedia.");
+    }
+
+    return {
+      streamUrl: item.previewUrl,
+      mimeType: "audio/mp4",
+      track: {
+        id: raw,
+        audioQuality: "PREVIEW",
+        format: "m4a",
+        codec: "AAC"
+      }
+    };
+  }
+};
+
+return MULTI_SOURCE_MUSIC;

@@ -1,36 +1,130 @@
 
-{
-  "category:modules": [
-    {
-      "id": "apple-music-all-in-one",
-      "name": "Apple Music",
-      "pkg": "com.dafa.8spine.applemusic",
-      "file": "apple-music.8spine",
-      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/apple-music.8spine",
-      "version": "1.0.0",
-      "code": 100,
-      "type": "MODULE",
-      "author": "Dafa",
-      "description": "Apple Music catalog metadata and available audio previews.",
-      "tags": [
-        "APPLE MUSIC",
-        "METADATA",
-        "PREVIEW"
-      ],
-      "featured": false,
-      "trusted": false,
-      "nsfw": false,
-      "size": 0,
-      "lang": "all",
-      "folder": ".",
-      "sources": [
-        {
-          "name": "Apple Music",
-          "lang": "all",
-          "id": "apple-music-all-in-one",
-          "baseUrl": "."
-        }
-      ]
+const MUSIC_ALL_IN_ONE = {
+  id: 'apple-music-all-in-one',
+  name: '8SPINE Music All-in-One Official',
+  version: '2.0.0',
+  labels: [
+    'SPOTIFY',
+    'YOUTUBE MUSIC',
+    'APPLE MUSIC',
+    'OFFICIAL'
+  ],
+
+  getSourceLinks(query) {
+    const q = encodeURIComponent(String(query || '').trim());
+
+    return {
+      spotify: 'https://open.spotify.com/search/' + q,
+      youtubeMusic: 'https://music.youtube.com/search?q=' + q,
+      appleMusic: 'https://music.apple.com/search?term=' + q
+    };
+  },
+
+  async searchTracks(query, limit = 25) {
+    const term = String(query || '').trim();
+
+    if (!term) {
+      return { tracks: [], total: 0 };
     }
-  ]
-}
+
+    const max = Math.max(1, Math.min(Number(limit) || 25, 50));
+
+    const endpoint =
+      'https://itunes.apple.com/search?term=' +
+      encodeURIComponent(term) +
+      '&entity=song&limit=' +
+      max +
+      '&country=id';
+
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+      throw new Error(
+        'Music search failed: ' + response.status
+      );
+    }
+
+    const data = await response.json();
+
+    const tracks = (data.results || []).map(item => {
+      const title = item.trackName || 'Unknown Title';
+      const artist = item.artistName || 'Unknown Artist';
+      const search = title + ' ' + artist;
+
+      return {
+        id: 'apple:' + item.trackId,
+        title: title,
+        artist: artist,
+        album: item.collectionName || '',
+        duration: Math.floor(
+          (item.trackTimeMillis || 0) / 1000
+        ),
+
+        albumCover: item.artworkUrl100
+          ? item.artworkUrl100.replace(
+              '100x100bb',
+              '600x600bb'
+            )
+          : null,
+
+        source: 'Apple Music',
+        appleMusicUrl: item.trackViewUrl || null,
+        previewUrl: item.previewUrl || null,
+
+        sourceLinks: this.getSourceLinks(search),
+
+        playbackInfo: {
+          appleMusic: 'Official Apple Music app',
+          spotify: 'Official Spotify app',
+          youtubeMusic: 'Official YouTube Music app'
+        },
+
+        audioQuality: 'PREVIEW'
+      };
+    });
+
+    return {
+      tracks: tracks,
+      total: Number(data.resultCount) || tracks.length
+    };
+  },
+
+  async getTrackStreamUrl(trackId, quality) {
+    const id = String(trackId).replace('apple:', '');
+
+    const endpoint =
+      'https://itunes.apple.com/lookup?id=' +
+      encodeURIComponent(id) +
+      '&country=id';
+
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+      throw new Error('Track lookup failed');
+    }
+
+    const data = await response.json();
+    const item = (data.results || []).find(
+      track => track.wrapperType === 'track'
+    );
+
+    if (!item || !item.previewUrl) {
+      return null;
+    }
+
+    return {
+      streamUrl: item.previewUrl,
+
+      track: {
+        id: 'apple:' + item.trackId,
+        title: item.trackName || '',
+        artist: item.artistName || '',
+        album: item.collectionName || '',
+        albumCover: item.artworkUrl100 || null,
+        audioQuality: 'PREVIEW'
+      }
+    };
+  }
+};
+
+return MUSIC_ALL_IN_ONE;

@@ -1,0 +1,18 @@
+
+{
+  "category:music": [
+    {
+      "id": "apple-music-all-in-one",
+      "name": "Apple Music",
+      "author": "Dafa",
+      "version": "1.0.0",
+      "description": "Apple Music metadata, search, albums, artists and previews.",
+      "labels": [
+        "APPLE MUSIC",
+        "METADATA",
+        "PREVIEW"
+      ],
+      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/apple-music.8spine"
+    }
+  ]
+}

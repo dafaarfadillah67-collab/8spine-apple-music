@@ -1,0 +1,18 @@
+{
+  "category:music": [
+    {
+      "id": "music-all-in-one",
+      "name": "Music All-in-One",
+      "author": "Dafa",
+      "version": "1.0.0",
+      "description": "Unified Spotify, YouTube Music and Apple Music integration for 8SPINE.",
+      "labels": [
+        "SPOTIFY",
+        "YOUTUBE MUSIC",
+        "APPLE MUSIC",
+        "ALL-IN-ONE"
+      ],
+      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/music-all-in-one.8spine"
+    }
+  ]
+}

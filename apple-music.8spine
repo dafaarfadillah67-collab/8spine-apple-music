@@ -1,0 +1,153 @@
+/**
+ * Apple Music Catalog + Preview module for 8SPINE
+ * Uses Apple's public iTunes Search/Lookup API for catalog metadata and
+ * preview clips. Full-length Apple Music playback requires MusicKit,
+ * user authorization, and an eligible subscription; this module does not
+ * bypass those requirements.
+ */
+const APPLE_MUSIC = {
+  id: 'apple-music-all-in-one',
+  name: 'Apple Music All-in-One',
+  version: '1.0.0',
+  labels: ['APPLE MUSIC', 'METADATA', 'PREVIEW'],
+
+  async searchTracks(query, limit = 25) {
+    const term = String(query || '').trim();
+    if (!term) return { tracks: [], total: 0 };
+
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 25, 50));
+    const endpoint = new URL('https://itunes.apple.com/search');
+    endpoint.searchParams.set('term', term);
+    endpoint.searchParams.set('entity', 'song');
+    endpoint.searchParams.set('limit', String(safeLimit));
+    endpoint.searchParams.set('country', 'id');
+
+    const response = await fetch(endpoint.toString());
+    if (!response.ok) {
+      throw new Error(`Apple catalog search failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    const tracks = (data.results || []).map(item => ({
+      id: String(item.trackId),
+      title: item.trackName || 'Unknown Title',
+      artist: item.artistName || 'Unknown Artist',
+      album: item.collectionName || '',
+      duration: Math.floor((item.trackTimeMillis || 0) / 1000),
+      albumCover: item.artworkUrl100
+        ? item.artworkUrl100.replace(/100x100bb/, '600x600bb')
+        : null,
+      appleMusicUrl: item.trackViewUrl || null,
+      previewUrl: item.previewUrl || null,
+      source: 'Apple Music'
+    }));
+
+    return { tracks, total: Number(data.resultCount) || tracks.length };
+  },
+
+  async getTrackStreamUrl(trackId, quality) {
+    const endpoint = new URL('https://itunes.apple.com/lookup');
+    endpoint.searchParams.set('id', String(trackId));
+    endpoint.searchParams.set('country', 'id');
+
+    const response = await fetch(endpoint.toString());
+    if (!response.ok) {
+      throw new Error(`Apple track lookup failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    const item = (data.results || []).find(result => result.wrapperType === 'track');
+    if (!item || !item.previewUrl) {
+      throw new Error('No playable preview is available for this track');
+    }
+
+    return {
+      streamUrl: item.previewUrl,
+      track: {
+        id: String(item.trackId || trackId),
+        title: item.trackName || '',
+        artist: item.artistName || '',
+        album: item.collectionName || '',
+        albumCover: item.artworkUrl100 || null,
+        duration: Math.floor((item.trackTimeMillis || 0) / 1000),
+        audioQuality: 'PREVIEW'
+      }
+    };
+  },
+
+  async getAlbum(albumId) {
+    const endpoint = new URL('https://itunes.apple.com/lookup');
+    endpoint.searchParams.set('id', String(albumId));
+    endpoint.searchParams.set('entity', 'song');
+    endpoint.searchParams.set('country', 'id');
+
+    const response = await fetch(endpoint.toString());
+    if (!response.ok) {
+      throw new Error(`Apple album lookup failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+    const collection = results.find(item => item.wrapperType === 'collection');
+    const tracks = results
+      .filter(item => item.wrapperType === 'track')
+      .map(item => ({
+        id: String(item.trackId),
+        title: item.trackName || 'Unknown Title',
+        artist: item.artistName || 'Unknown Artist',
+        album: item.collectionName || '',
+        duration: Math.floor((item.trackTimeMillis || 0) / 1000),
+        albumCover: item.artworkUrl100 || null,
+        appleMusicUrl: item.trackViewUrl || null,
+        previewUrl: item.previewUrl || null,
+        source: 'Apple Music'
+      }));
+
+    return {
+      album: collection ? {
+        id: String(collection.collectionId),
+        title: collection.collectionName || '',
+        artist: collection.artistName || '',
+        artwork: collection.artworkUrl100 || null,
+        appleMusicUrl: collection.collectionViewUrl || null
+      } : null,
+      tracks
+    };
+  },
+
+  async getArtist(artistId) {
+    const endpoint = new URL('https://itunes.apple.com/lookup');
+    endpoint.searchParams.set('id', String(artistId));
+    endpoint.searchParams.set('entity', 'album');
+    endpoint.searchParams.set('country', 'id');
+
+    const response = await fetch(endpoint.toString());
+    if (!response.ok) {
+      throw new Error(`Apple artist lookup failed (${response.status})`);
+    }
+
+    const data = await response.json();
+    const results = data.results || [];
+    const artist = results.find(item => item.wrapperType === 'artist');
+    const albums = results
+      .filter(item => item.wrapperType === 'collection')
+      .map(item => ({
+        id: String(item.collectionId),
+        title: item.collectionName || '',
+        artist: item.artistName || '',
+        artwork: item.artworkUrl100 || null,
+        appleMusicUrl: item.collectionViewUrl || null
+      }));
+
+    return {
+      artist: artist ? {
+        id: String(artist.artistId),
+        name: artist.artistName || '',
+        appleMusicUrl: artist.artistLinkUrl || null
+      } : null,
+      albums
+    };
+  }
+};
+
+return APPLE_MUSIC;

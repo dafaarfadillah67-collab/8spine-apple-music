@@ -1,18 +1,36 @@
 
 {
-  "category:music": [
+  "category:modules": [
     {
       "id": "apple-music-all-in-one",
       "name": "Apple Music",
-      "author": "Dafa",
+      "pkg": "com.dafa.8spine.applemusic",
+      "file": "apple-music.8spine",
+      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/apple-music.8spine",
       "version": "1.0.0",
-      "description": "Apple Music metadata, search, albums, artists and previews.",
-      "labels": [
+      "code": 100,
+      "type": "MODULE",
+      "author": "Dafa",
+      "description": "Apple Music catalog metadata and available audio previews.",
+      "tags": [
         "APPLE MUSIC",
         "METADATA",
         "PREVIEW"
       ],
-      "download": "https://raw.githubusercontent.com/dafaarfadillah67-collab/8spine-apple-music/main/apple-music.8spine"
+      "featured": false,
+      "trusted": false,
+      "nsfw": false,
+      "size": 0,
+      "lang": "all",
+      "folder": ".",
+      "sources": [
+        {
+          "name": "Apple Music",
+          "lang": "all",
+          "id": "apple-music-all-in-one",
+          "baseUrl": "."
+        }
+      ]
     }
   ]
 }
